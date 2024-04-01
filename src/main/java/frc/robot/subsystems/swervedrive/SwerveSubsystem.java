@@ -336,6 +336,38 @@ public class SwerveSubsystem extends SubsystemBase
   }
 
   /**
+   * Command to drive the robot using translative values and heading as angular velocity.
+   *
+   * @param translationX     Translation in the X direction. Cubed for smoother controls.
+   * @param translationY     Translation in the Y direction. Cubed for smoother controls.
+   * @param angularRotationX Angular velocity of the robot to set. Cubed for smoother controls.
+   * @return Drive command.
+   */
+  public Command driveCommandFixedScaling(DoubleSupplier translationX, DoubleSupplier translationY, DoubleSupplier angularRotationX)
+  {
+    return run(() -> {
+      double xInput = translationX.getAsDouble();
+      double yInput = translationY.getAsDouble();
+
+      Translation2d inputTranslation = new Translation2d(xInput, yInput);
+      double magnitude = inputTranslation.getNorm();
+      Rotation2d angle = inputTranslation.getAngle();
+
+      double curvedMagnitude = Math.pow(magnitude, 3);
+
+      double xVelocity = curvedMagnitude * angle.getCos() * swerveDrive.getMaximumVelocity();
+      double yVelocity = curvedMagnitude * angle.getSin() * swerveDrive.getMaximumVelocity();
+
+      // Make the robot move
+      swerveDrive.drive(new Translation2d(xVelocity,
+                                          yVelocity),
+                        Math.pow(angularRotationX.getAsDouble(), 3) * swerveDrive.getMaximumAngularVelocity(),
+                        true,
+                        false);
+    });
+  }
+
+  /**
    * The primary method for controlling the drivebase.  Takes a {@link Translation2d} and a rotation rate, and
    * calculates and commands module states accordingly.  Can use either open-loop or closed-loop velocity control for
    * the wheel velocities.  Also has field- and robot-relative modes, which affect how the translation vector is used.
